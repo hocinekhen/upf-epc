@@ -29,51 +29,36 @@ RUN mkdir linux && \
     make $MAKEFLAGS install_headers && \
     ldconfig
 
-# dpdk
-ARG DPDK_URL='http://dpdk.org/git/dpdk-stable'
-ARG DPDK_VER='19.11'
-ENV DPDK_DIR="/dpdk"
-RUN git clone -b $DPDK_VER -q --depth 1 $DPDK_URL $DPDK_DIR
-
-# Customizing DPDK install
-WORKDIR $DPDK_DIR
-COPY patches/dpdk patches
-RUN cat patches/* | patch -p1
-
-ARG CPU=native
-ARG RTE_TARGET='x86_64-native-linuxapp-gcc'
-RUN sed -ri 's,(IGB_UIO=).*,\1n,' config/common_linux* && \
-    sed -ri 's,(KNI_KMOD=).*,\1n,' config/common_linux* && \
-    sed -ri 's,(LIBRTE_BPF=).*,\1n,' config/common_base && \
-    sed -ri 's,(LIBRTE_PMD_PCAP=).*,\1y,' config/common_base && \
-    sed -ri 's,(PORT_PCAP=).*,\1y,' config/common_base && \
-    sed -ri 's,(AF_XDP=).*,\1y,' config/common_base && \
-    make config T=$RTE_TARGET && \
-    make $MAKEFLAGS EXTRA_CFLAGS="-march=$CPU -g -w -fPIC -DALLOW_EXPERIMENTAL_API"
-
-# Prepare BESS source & apply patches
-ARG BESS_COMMIT=master
+# BESS pre-reqs
+RUN apt-get update && apt-get install -y wget unzip ca-certificates
 WORKDIR /
-RUN apt-get update && apt-get install -y wget unzip ca-certificates git
+ARG BESS_COMMIT=master
 RUN wget -qO bess.zip https://github.com/NetSys/bess/archive/${BESS_COMMIT}.zip && unzip bess.zip
 WORKDIR bess-${BESS_COMMIT}
-COPY core/ core/
-COPY patches/bess patches
-RUN cp -a ${DPDK_DIR} deps/dpdk-19.11.1 && \
-    cat patches/* | patch -p1 && \
-    mkdir plugins
 
-# Plugins plugins
-## SequentialUpdate plugin
+# Patch BESS, patch and build DPDK
+COPY patches/dpdk/* deps/
+COPY patches/bess patches
+RUN cat patches/* | patch -p1 && \
+    ./build.py dpdk
+
+# Hack to get static version linked
+RUN rm -f /usr/local/lib64/libbpf.so*
+
+# Plugins
+RUN mkdir -p plugins
+
+## SequentialUpdate
 RUN mv sample_plugin plugins
 
-## Network Token plugin
+## Network Token
 ARG ENABLE_NTF
 ARG NTF_COMMIT=master
 COPY install_ntf.sh .
 RUN ./install_ntf.sh
 
 # Build and copy artifacts
+COPY core/ core/
 COPY build_bess.sh .
 RUN ./build_bess.sh && \
     cp bin/bessd /bin && \
