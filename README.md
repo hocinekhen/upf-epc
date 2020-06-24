@@ -2,6 +2,10 @@
 SPDX-License-Identifier: Apache-2.0
 Copyright(c) 2019 Intel Corporation
 -->
+[![GitHub license](https://img.shields.io/github/license/omec-project/upf-epc)](https://github.com/omec-project/upf-epc/blob/master/LICENSE)
+[![GitHub stars](https://img.shields.io/github/stars/omec-project/upf-epc)](https://github.com/omec-project/upf-epc/stargazers)
+[![GitHub forks](https://img.shields.io/github/forks/omec-project/upf-epc)](https://github.com/omec-project/upf-epc/network)
+[![GitHub issues](https://img.shields.io/github/issues/omec-project/upf-epc)](https://github.com/omec-project/upf-epc/issues)
 
 # UPF-EPC - Overview
 
